@@ -1,42 +1,104 @@
-import numpy as np 
 import numpy as np
+import os
+import time
 import matplotlib.pyplot as plt
+import imageio.v2 as imageio
 
 # Define parameters
-D = 0.1  # Diffusion coefficient
 L = 1.0  # Length of the domain
 N = 200  # Number of grid points
-T = 0.05  # Total time
-dt = 0.00005  # Time step size
+T = 0.025  # Total time
+dt = 0.000001  # Time step size
 
 # Calculate grid spacing
 dx = L / (N - 1)
-
-print("Courant number: ", D * dt / dx**2)
 
 # Create grid
 x = np.linspace(0, L, N)
 y = np.linspace(0, L, N)
 X, Y = np.meshgrid(x, y)
 
-# Initialize concentration field
-C = np.zeros((N, N))
-C[N//2, N//2] = 1.0  # Initial condition
+# Initialize concentration of preys
+u = 1 + np.random.normal(0, 0.0001, (N, N))
+
+# Initialize concentration of predators
+v = 1 + np.random.normal(0, 0.0001, (N, N))
+
+# Constants 
+rho_r = 0.3
+rho_d = 0.3
+# k = 2.
+# W = 0.25
+U_s = 0.4/5
+
+k_arr = [0.2]
+W_arr = [0.05]
+
+for W in W_arr:
+    for k in k_arr:
+        print("gamma = ", W/(W + U_s))
+        print("phi = ", (k - 2*U_s)/(k - U_s))
+
+# Function to compute derivatives with periodic boundary conditions
+def compute_derivatives(u, v, k, W):
+    u_xx = (np.roll(u, 1, axis=0) + np.roll(u, -1, axis=0) + np.roll(u, 1, axis=1) + np.roll(u, -1, axis=1) - 4 * u) / dx**2
+    v_xx = (np.roll(v, 1, axis=0) + np.roll(v, -1, axis=0) + np.roll(v, 1, axis=1) + np.roll(v, -1, axis=1) - 4 * v) / dx**2
+    
+    du = rho_r * ((k - U_s * u) / (k - U_s) * u - (W + U_s) / (W + U_s * u) * u * v) + rho_d * u_xx
+    dv = (W + U_s) / (W + U_s * u) * u * v - v**2 + v_xx
+    
+    return du, dv
 
 # Solve the diffusion equation
-num_steps = int(T / dt)
-print(dx)
-for step in range(num_steps):
-    # Calculate Laplacian using finite difference method
-    laplacian = (np.roll(C, 1, axis=0) + np.roll(C, -1, axis=0) + np.roll(C, 1, axis=1) + np.roll(C, -1, axis=1) - 4 * C) / dx**2
+num_steps = int(T // dt)
+frames_u = []
+frames_v = []
+start_time = time.time()
 
-    # Update concentration field
-    C += D * dt * laplacian
+for k in k_arr:
+    for W in W_arr:
+        for step in range(num_steps):
+            # Update concentration fields
+            k1_u, k1_v = compute_derivatives(u, v, k, W)
+            k2_u, k2_v = compute_derivatives(u + dt / 4 * k1_u, v + dt / 4 * k1_v, k, W)
+            k3_u, k3_v = compute_derivatives(u + dt / 8 * k1_u + dt / 8 * k2_u, v + dt / 8 * k1_v + dt / 8 * k2_v, k, W)
+            k4_u, k4_v = compute_derivatives(u - dt / 2 * k2_u + dt * k3_u, v - dt / 2 * k2_v + dt * k3_v, k, W)
+            k5_u, k5_v = compute_derivatives(u + 3 * dt / 16 * k1_u + 9 * dt / 16 * k4_u, v + 3 * dt / 16 * k1_v + 9 * dt / 16 * k4_v, k, W)
+            k6_u, k6_v = compute_derivatives(u - 3 * dt / 7 * k1_u + 2 * dt / 7 * k2_u + 12 * dt / 7 * k3_u - 12 * dt / 7 * k4_u + 8 * dt / 7 * k5_u, v - 3 * dt / 7 * k1_v + 2 * dt / 7 * k2_v + 12 * dt / 7 * k3_v - 12 * dt / 7 * k4_v + 8 * dt / 7 * k5_v, k, W)
 
-# Plot the concentration fieldc
-plt.imshow(C, cmap='hot', origin='lower', extent=[0, L, 0, L])
-plt.colorbar(label='Concentration')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Diffusion Equation')
-plt.show()
+            u += dt * (7 * k1_u + 32 * k3_u + 12 * k4_u + 32 * k5_u + 7 * k6_u) / 90
+            v += dt * (7 * k1_v + 32 * k3_v + 12 * k4_v + 32 * k5_v + 7 * k6_v) / 90
+
+            if step % 1000 == 0:
+                print("Step: ", step)
+                plt.imshow(u, cmap='hot', origin='lower', extent=[0, L, 0, L])
+                plt.colorbar(label='Concentration')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title(f'Diffusion Equation at timestep {step}')
+                plt.savefig(f'output/frame_{step}_u.png')
+                plt.close()
+                frames_u.append(imageio.imread(f'output/frame_{step}_u.png'))
+
+                plt.imshow(v, cmap='hot', origin='lower', extent=[0, L, 0, L])
+                plt.colorbar(label='Concentration')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title(f'Diffusion Equation at timestep {step}')
+                plt.savefig(f'output/frame_{step}_v.png')
+                plt.close()
+                frames_v.append(imageio.imread(f'output/frame_{step}_v.png'))
+
+# Create GIF
+imageio.mimsave('output/diffusion_u_{k}_{W}.gif'.format(k=k, W=W), frames_u, duration=1)
+imageio.mimsave('output/diffusion_v_{k}_{W}.gif'.format(k=k, W=W), frames_v, duration=1)
+
+# Remove frame files
+frame_files = os.listdir('output')
+for file in frame_files:
+    if file.startswith('frame_'):
+        os.remove(os.path.join('output', file))
+
+end_time = time.time()
+execution_time = end_time - start_time
+print("Execution time:", execution_time)
