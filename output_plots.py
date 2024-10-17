@@ -16,7 +16,7 @@ for csv_file in csv_files_u:
     u = np.loadtxt(csv_file, delimiter=',')
     
     # Plot u
-    plt.imshow(u, cmap='hot', origin='lower', extent=[0, 1, 0, 1])
+    plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
     plt.colorbar(label='Concentration')
     # Save the plot as an image
     image_path = csv_file.replace('.csv', '.png')
@@ -34,7 +34,7 @@ for csv_file in csv_files_v:
     u = np.loadtxt(csv_file, delimiter=',')
     
     # Plot u
-    plt.imshow(u, cmap='hot', origin='lower', extent=[0, 1, 0, 1])
+    plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
     plt.colorbar(label='Concentration')
     # Save the plot as an image
     image_path = csv_file.replace('.csv', '.png')
@@ -51,7 +51,17 @@ for csv_file in csv_files_u:
     os.remove(csv_file)
     os.remove(image_path)
 
+    # Save the last image as an SVG
+    last_image_path = csv_files_u[-1].replace('.csv', '.png')
+    last_image_svg_path = last_image_path.replace('.png', '.svg')
+    plt.savefig(last_image_svg_path, format='svg')
+
 for csv_file in csv_files_v:
     image_path = csv_file.replace('.csv', '.png')
     os.remove(csv_file)
     os.remove(image_path)
+
+    # Save the last image as an SVG
+    last_image_path = csv_files_v[-1].replace('.csv', '.png')
+    last_image_svg_path = last_image_path.replace('.png', '.svg')
+    plt.savefig(last_image_svg_path, format='svg')
