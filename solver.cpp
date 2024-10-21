@@ -10,8 +10,8 @@
 // Define parameters
 const double L = 100.0;  // Length of the domain
 const int N = 200;  // Number of grid points
-const double T = 100;  // Total time
-const double dt = 0.0001;  // Time step size
+const double T = 300;  // Total time
+const double dt = 0.0005;  // Time step size
 const double dx = L / (N - 1);
 
 // Constants
@@ -89,15 +89,23 @@ int main() {
     printf("Number of threads: %d\n", omp_get_max_threads());
     omp_set_num_threads(omp_get_max_threads());
 
-    k_arr.push_back(2.8);
-    W_arr.push_back(0.35);
+    k_arr.push_back(1.2);
+    W_arr.push_back(0.15);
+    
+    // std::vector<double> W_list = {0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
+    // W_arr.insert(W_arr.end(), W_list.begin(), W_list.end());
+
+    // std::vector<double> k_list = {0.85, 1, 2, 2.5, 3, 3.5, 4};
+    // k_arr.insert(k_arr.end(), k_list.begin(), k_list.end());
 
     for (double k : k_arr){
+        std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << " : ";
         for (double W : W_arr){
-            std::cout << "gamma : " << W/(W + U_s) << std::endl;
-            std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << std::endl;
+            std::cout << "gamma : " << W/(W + U_s)  << " ";
         }
+        std::cout << std::endl;
     }
+    std::cout << std::endl;
     
     // Initialize concentration of preys and predators
     std::vector<std::vector<double> > u(N, std::vector<double>(N, 1));
@@ -147,6 +155,8 @@ int main() {
 
     for (double k : k_arr) {
         for (double W : W_arr) {
+            std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << std::endl;
+            std::cout << "gamma : " << W/(W + U_s)  << std::endl;
             for (int step = 0; step < num_steps; ++step) {
                 // Compute k1
                 compute_derivatives(u, v, k1_u, k1_v, k, W);
@@ -220,16 +230,15 @@ int main() {
                     }
                 }
 
-                if (step % 10000 == 0) {
-                    //std::cout << "Step: " << step << " out of " << num_steps << std::endl;
-                    // Display loading bar
-                    display_loading_bar(step, num_steps);
+                display_loading_bar(step, num_steps);
+                if (step == num_steps - 1) 
+                {
                     std::ostringstream filename_u;
-                    filename_u << "output/frame_u_" << std::setw(6) << std::setfill('0') << step << ".csv";
+                    filename_u << "output/frame_u_k" << k << "_W" << W << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
                     save_to_csv(u, filename_u.str());
 
                     std::ostringstream filename_v;
-                    filename_v << "output/frame_v_" << std::setw(6) << std::setfill('0') << step << ".csv";
+                    filename_v << "output/frame_v_k" << k << "_W" << W << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
                     save_to_csv(v, filename_v.str());
                 }
             }
