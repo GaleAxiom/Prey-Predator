@@ -54,7 +54,7 @@ void compute_derivatives(const std::vector<std::vector<double> >& u, const std::
 }
 
 // Function to display the loading bar
-void display_loading_bar(int step, int total_steps) {
+void display_loading_bar(int step, int total_steps, double variance) {
     int bar_width = 70;
     float progress = (float)step / total_steps;
     int pos = bar_width * progress;
@@ -65,7 +65,7 @@ void display_loading_bar(int step, int total_steps) {
         else if (i == pos) std::cout << ">";
         else std::cout << " ";
     }
-    std::cout << "] " << int(progress * 100.0) << " %\r";
+    std::cout << "] " << int(progress * 100.0) << "% Variance: " << variance << "\r";
     std::cout.flush();
 }
 
@@ -89,8 +89,8 @@ int main() {
     printf("Number of threads: %d\n", omp_get_max_threads());
     omp_set_num_threads(omp_get_max_threads());
 
-    k_arr.push_back(1.2);
-    W_arr.push_back(0.15);
+    k_arr.push_back(2.8);
+    W_arr.push_back(0.36);
     
     // std::vector<double> W_list = {0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
     // W_arr.insert(W_arr.end(), W_list.begin(), W_list.end());
@@ -108,33 +108,21 @@ int main() {
     std::cout << std::endl;
     
     // Initialize concentration of preys and predators
-    std::vector<std::vector<double> > u(N, std::vector<double>(N, 1));
-    std::vector<std::vector<double> > v(N, std::vector<double>(N, 1));
+    std::vector<std::vector<double> > u_init(N, std::vector<double>(N, 1));
+    std::vector<std::vector<double> > v_init(N, std::vector<double>(N, 1));
 
     // Add small random perturbations
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
-            u[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
-            v[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
+            u_init[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
+            v_init[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
         }
     }
 
     int num_steps = static_cast<int>(T / dt);
 
     const auto start = std::chrono::high_resolution_clock::now();
-    
-    // Dormand–Prince coefficients
-    const double a2 = 1.0 / 5.0;
-    const double a3 = 3.0 / 10.0;
-    const double a4 = 4.0 / 5.0;
-    const double a5 = 8.0 / 9.0;
-    const double b1 = 35.0 / 384.0;
-    const double b2 = 0.0;
-    const double b3 = 500.0 / 1113.0;
-    const double b4 = 125.0 / 192.0;
-    const double b5 = -2187.0 / 6784.0;
-    const double b6 = 11.0 / 84.0;
 
     std::vector<std::vector<double>> k1_u(N, std::vector<double>(N));
     std::vector<std::vector<double>> k1_v(N, std::vector<double>(N));
@@ -153,10 +141,41 @@ int main() {
     std::vector<std::vector<double>> u_temp(N, std::vector<double>(N));
     std::vector<std::vector<double>> v_temp(N, std::vector<double>(N));
 
+    std::vector<std::vector<double>> u(N, std::vector<double>(N));
+    std::vector<std::vector<double>> v(N, std::vector<double>(N));
+
     for (double k : k_arr) {
         for (double W : W_arr) {
             std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << std::endl;
             std::cout << "gamma : " << W/(W + U_s)  << std::endl;
+
+            std::fill(u.begin(), u.end(), std::vector<double>(N, 0));
+            std::fill(v.begin(), v.end(), std::vector<double>(N, 0));
+            std::fill(k1_u.begin(), k1_u.end(), std::vector<double>(N, 0));
+            std::fill(k1_v.begin(), k1_v.end(), std::vector<double>(N, 0));
+            std::fill(k2_u.begin(), k2_u.end(), std::vector<double>(N, 0));
+            std::fill(k2_v.begin(), k2_v.end(), std::vector<double>(N, 0));
+            std::fill(k3_u.begin(), k3_u.end(), std::vector<double>(N, 0));
+            std::fill(k3_v.begin(), k3_v.end(), std::vector<double>(N, 0));
+            std::fill(k4_u.begin(), k4_u.end(), std::vector<double>(N, 0));
+            std::fill(k4_v.begin(), k4_v.end(), std::vector<double>(N, 0));
+            std::fill(k5_u.begin(), k5_u.end(), std::vector<double>(N, 0));
+            std::fill(k5_v.begin(), k5_v.end(), std::vector<double>(N, 0));
+            std::fill(k6_u.begin(), k6_u.end(), std::vector<double>(N, 0));
+            std::fill(k6_v.begin(), k6_v.end(), std::vector<double>(N, 0));
+            std::fill(k7_u.begin(), k7_u.end(), std::vector<double>(N, 0));
+            std::fill(k7_v.begin(), k7_v.end(), std::vector<double>(N, 0));
+            std::fill(u_temp.begin(), u_temp.end(), std::vector<double>(N, 0));
+            std::fill(v_temp.begin(), v_temp.end(), std::vector<double>(N, 0));
+
+
+            for (int i = 0; i < N; ++i) {
+                for (int j = 0; j < N; ++j) {
+                    u[i][j] = u_init[i][j];
+                    v[i][j] = v_init[i][j];
+                }
+            }
+
             for (int step = 0; step < num_steps; ++step) {
                 // Compute k1
                 compute_derivatives(u, v, k1_u, k1_v, k, W);
@@ -165,8 +184,8 @@ int main() {
                 #pragma omp parallel for
                 for (int i = 0; i < N; ++i) {
                     for (int j = 0; j < N; ++j) {
-                        u_temp[i][j] = u[i][j] + dt * a2 * k1_u[i][j];
-                        v_temp[i][j] = v[i][j] + dt * a2 * k1_v[i][j];
+                        u_temp[i][j] = u[i][j] + dt * 1.0 / 5.0 * k1_u[i][j];
+                        v_temp[i][j] = v[i][j] + dt * 1.0 / 5.0 * k1_v[i][j];
                     }
                 }
                 compute_derivatives(u_temp, v_temp, k2_u, k2_v, k, W);
@@ -225,12 +244,23 @@ int main() {
                 #pragma omp parallel for
                 for (int i = 0; i < N; ++i) {
                     for (int j = 0; j < N; ++j) {
-                        u[i][j] += dt * (b1 * k1_u[i][j] + b2 * k2_u[i][j] + b3 * k3_u[i][j] + b4 * k4_u[i][j] + b5 * k5_u[i][j] + b6 * k6_u[i][j]);
-                        v[i][j] += dt * (b1 * k1_v[i][j] + b2 * k2_v[i][j] + b3 * k3_v[i][j] + b4 * k4_v[i][j] + b5 * k5_v[i][j] + b6 * k6_v[i][j]);
+                        u[i][j] += dt * (35.0 / 384.0 * k1_u[i][j] + 0.0 * k2_u[i][j] + 500.0 / 1113.0 * k3_u[i][j] + 125.0 / 192.0 * k4_u[i][j] -2187.0 / 6784.0 * k5_u[i][j] + 11.0 / 84.0 * k6_u[i][j]);
+                        v[i][j] += dt * (35.0 / 384.0 * k1_v[i][j] + 0.0 * k2_v[i][j] + 500.0 / 1113.0 * k3_v[i][j] + 125.0 / 192.0 * k4_v[i][j] -2187.0 / 6784.0 * k5_v[i][j] + 11.0 / 84.0 * k6_v[i][j]);
                     }
                 }
 
-                display_loading_bar(step, num_steps);
+                // Compute variance with respect to the center point
+                double variance = 0.0;
+                #pragma omp parallel for reduction(+:variance)
+                for (int i = 0; i < N; ++i) {
+                    for (int j = 0; j < N; ++j) {
+                        double diff = u[i][j] - u[N/2][N/2];
+                        variance += diff * diff;
+                    }
+                }
+                variance /= (N * N);
+
+                display_loading_bar(step, num_steps, variance);
                 if (step == num_steps - 1) 
                 {
                     std::ostringstream filename_u;
