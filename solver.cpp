@@ -17,13 +17,9 @@ const double dx = L / (N - 1);
 // Constants
 const double rho_r = 3.333;
 const double rho_d = 0.3;
-const double U_s = 0.4;
-
-std::vector<double> k_arr;
-std::vector<double> W_arr;
 
 // Function to compute derivatives with periodic boundary conditions
-void compute_derivatives(const std::vector<std::vector<double> >& u, const std::vector<std::vector<double> >& v, std::vector<std::vector<double> >& du, std::vector<std::vector<double> >& dv, double k, double W) {
+void compute_derivatives(const std::vector<std::vector<double> >& u, const std::vector<std::vector<double> >& v, std::vector<std::vector<double> >& du, std::vector<std::vector<double> >& dv, double k, double W, double U_s) {
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
@@ -89,25 +85,29 @@ int main() {
     printf("Number of threads: %d\n", omp_get_max_threads());
     omp_set_num_threads(omp_get_max_threads());
 
-    k_arr.push_back(2.8);
-    W_arr.push_back(0.36);
-    
-    // std::vector<double> W_list = {0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
-    // W_arr.insert(W_arr.end(), W_list.begin(), W_list.end());
+    const auto U_s = 0.4; //hardcoded to 0.4
+    std::vector<double> phi_arr;
+    std::vector<double> gamma_arr;
 
-    // std::vector<double> k_list = {0.85, 1, 2, 2.5, 3, 3.5, 4};
-    // k_arr.insert(k_arr.end(), k_list.begin(), k_list.end());
+    // Define parameters
+    int num_phi = 2;  // Number of points in phi_arr
+    double phi_start = 0.83;
+    double phi_end = 0.9;
+    double phi_step = (phi_end - phi_start) / (num_phi - 1);
 
-    for (double k : k_arr){
-        std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << " : ";
-        for (double W : W_arr){
-            std::cout << "gamma : " << W/(W + U_s)  << " ";
-        }
-        std::cout << std::endl;
+    for (int i = 0; i < num_phi; ++i) {
+        phi_arr.push_back(phi_start + i * phi_step);
     }
-    std::cout << std::endl;
+
+    int num_gamma = 2;  // Number of points in gamma_arr
+    double gamma_start = 0.48;
+    double gamma_end = 0.55;
+    double gamma_step = (gamma_end - gamma_start) / (num_gamma - 1);
+
+    for (int i = 0; i < num_gamma; ++i) {
+        gamma_arr.push_back(gamma_start + i * gamma_step);
+    }
     
-    // Initialize concentration of preys and predators
     std::vector<std::vector<double> > u_init(N, std::vector<double>(N, 1));
     std::vector<std::vector<double> > v_init(N, std::vector<double>(N, 1));
 
@@ -144,8 +144,12 @@ int main() {
     std::vector<std::vector<double>> u(N, std::vector<double>(N));
     std::vector<std::vector<double>> v(N, std::vector<double>(N));
 
-    for (double k : k_arr) {
-        for (double W : W_arr) {
+    for (double phi : phi_arr) {
+        for (double gamma : gamma_arr) {
+
+            const auto k = (phi - 2.) / (phi - 1.) * U_s;
+            const auto W =  gamma * U_s / (1 - gamma);
+            
             std::cout << "phi :" << (k - 2* U_s)/ (k - U_s) << std::endl;
             std::cout << "gamma : " << W/(W + U_s)  << std::endl;
 
@@ -178,7 +182,7 @@ int main() {
 
             for (int step = 0; step < num_steps; ++step) {
                 // Compute k1
-                compute_derivatives(u, v, k1_u, k1_v, k, W);
+                compute_derivatives(u, v, k1_u, k1_v, k, W, U_s);
 
                 // Compute k2
                 #pragma omp parallel for
@@ -188,7 +192,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * 1.0 / 5.0 * k1_v[i][j];
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k2_u, k2_v, k, W);
+                compute_derivatives(u_temp, v_temp, k2_u, k2_v, k, W, U_s);
 
                 // Compute k3
                 #pragma omp parallel for
@@ -198,7 +202,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * (3.0 / 40.0 * k1_v[i][j] + 9.0 / 40.0 * k2_v[i][j]);
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k3_u, k3_v, k, W);
+                compute_derivatives(u_temp, v_temp, k3_u, k3_v, k, W, U_s);
 
                 // Compute k4
                 #pragma omp parallel for
@@ -208,7 +212,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * (44.0 / 45.0 * k1_v[i][j] - 56.0 / 15.0 * k2_v[i][j] + 32.0 / 9.0 * k3_v[i][j]);
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k4_u, k4_v, k, W);
+                compute_derivatives(u_temp, v_temp, k4_u, k4_v, k, W, U_s);
 
                 // Compute k5
                 #pragma omp parallel for
@@ -218,7 +222,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * (19372.0 / 6561.0 * k1_v[i][j] - 25360.0 / 2187.0 * k2_v[i][j] + 64448.0 / 6561.0 * k3_v[i][j] - 212.0 / 729.0 * k4_v[i][j]);
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k5_u, k5_v, k, W);
+                compute_derivatives(u_temp, v_temp, k5_u, k5_v, k, W, U_s);
 
                 // Compute k6
                 #pragma omp parallel for
@@ -228,7 +232,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * (9017.0 / 3168.0 * k1_v[i][j] - 355.0 / 33.0 * k2_v[i][j] + 46732.0 / 5247.0 * k3_v[i][j] + 49.0 / 176.0 * k4_v[i][j] - 5103.0 / 18656.0 * k5_v[i][j]);
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k6_u, k6_v, k, W);
+                compute_derivatives(u_temp, v_temp, k6_u, k6_v, k, W, U_s);
 
                 // Compute k7
                 #pragma omp parallel for
@@ -238,7 +242,7 @@ int main() {
                         v_temp[i][j] = v[i][j] + dt * (35.0 / 384.0 * k1_v[i][j] + 500.0 / 1113.0 * k3_v[i][j] + 125.0 / 192.0 * k4_v[i][j] - 2187.0 / 6784.0 * k5_v[i][j] + 11.0 / 84.0 * k6_v[i][j]);
                     }
                 }
-                compute_derivatives(u_temp, v_temp, k7_u, k7_v, k, W);
+                compute_derivatives(u_temp, v_temp, k7_u, k7_v, k, W, U_s);
 
                 // Update u and v
                 #pragma omp parallel for
@@ -259,16 +263,20 @@ int main() {
                     }
                 }
                 variance /= (N * N);
+    
+                if(variance < 1e-20) {
+                    break;
+                }
 
                 display_loading_bar(step, num_steps, variance);
                 if (step == num_steps - 1) 
                 {
                     std::ostringstream filename_u;
-                    filename_u << "output/frame_u_k" << k << "_W" << W << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
+                    filename_u << "output/frame_u_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
                     save_to_csv(u, filename_u.str());
 
                     std::ostringstream filename_v;
-                    filename_v << "output/frame_v_k" << k << "_W" << W << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
+                    filename_v << "output/frame_v_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
                     save_to_csv(v, filename_v.str());
                 }
             }
