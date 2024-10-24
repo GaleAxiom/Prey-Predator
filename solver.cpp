@@ -248,17 +248,15 @@ int main(int argc, char* argv[]) {
         }
 
         display_loading_bar(step, num_steps, variance);
-        if (step == num_steps - 1) 
-        {
-            std::ostringstream filename_u;
-            filename_u << "output/frame_u_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
-            save_to_csv(u, filename_u.str());
-
-            std::ostringstream filename_v;
-            filename_v << "output/frame_v_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
-            save_to_csv(v, filename_v.str());
-        }
     }
+
+    std::ostringstream filename_u;
+    filename_u << "output/frame_u_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << num_steps << ".csv";
+    save_to_csv(u, filename_u.str());
+
+    std::ostringstream filename_v;
+    filename_v << "output/frame_v_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << num_steps << ".csv";
+    save_to_csv(v, filename_v.str());
 
     const auto end = std::chrono::high_resolution_clock::now();
     const std::chrono::duration<double> elapsed = end - start;
