@@ -3,6 +3,18 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import os
 
+plt.rcParams.update({
+    "axes.grid": True,
+    "grid.color" : (0.5, 0.5, 0.5, 0.4),
+    "figure.figsize": (10, 5),
+    "figure.constrained_layout.use": True,
+    "font.size": 14,
+    "axes.labelsize": 14,
+    "font.family": "serif",
+    "mathtext.fontset": "dejavuserif",
+    "axes.prop_cycle": plt.cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#bcbd22', '#17becf', '#7f7f7f', 'darkblue', 'gold', 'salmon', 'teal', '#e377c2', 'tan', 'darkred'])
+})
+
 # Load data from CSV
 data = np.genfromtxt('output/message.txt', delimiter=',')
 data = data[1:]  # Skip header if present
@@ -36,7 +48,7 @@ ticks = np.arange(len(charaterizatiion))
 
 #coolwarm, nipy_spectral
 cmap = plt.get_cmap('nipy_spectral', len(charaterizatiion))
-sc = plt.pcolormesh(X, Y, Z.T, cmap=cmap, shading='auto')
+sc = plt.pcolormesh(X, Y, Z.T, cmap=cmap)
 norm = mcolors.BoundaryNorm(boundaries, cmap.N)
 cbar = plt.colorbar(sc, boundaries=boundaries, ticks=ticks, norm=norm)
 cbar.ax.set_yticklabels((charaterizatiion))
@@ -56,10 +68,9 @@ plt.plot(phi[(gamma_turing > gamma_hopf) & (gamma_turing < phi - rho_d/rho_r)], 
         gamma_turing[(gamma_turing > gamma_hopf) & (gamma_turing < phi - rho_d/rho_r)], label=r'Turing', color='yellow', linewidth=1.4)
 
 plt.legend()
-plt.xlabel(r'$\phi$')
+plt.xlabel(r'$\varphi$')
 plt.ylabel(r'$\gamma$')
 plt.xticks(np.arange(0.5, 1.01, 0.1))
 plt.yticks(np.arange(0.2, 0.75, 0.05))
-plt.tight_layout()
 plt.savefig('output/classification.svg')
 plt.clf()  # Clear the figure for the next plot
