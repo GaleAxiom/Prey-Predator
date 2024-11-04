@@ -11,3 +11,7 @@ solver.o
 solver
 env
 .vscode
+
+*.csv
+*.svg
+*.out

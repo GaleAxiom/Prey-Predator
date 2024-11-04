@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import glob
 import os
+from tqdm import tqdm
 
 # Create a list to store frames
 frames = []
@@ -45,7 +46,7 @@ csv_files_v = sorted(glob.glob('output/frame_v_*.csv'))
 # # Save frames as a GIF
 # imageio.mimsave('GIFs/output_animation_v.gif', frames, duration=1)
 
-for i in range(0, len(csv_files_u)):
+for i in tqdm(range(0, len(csv_files_u))):
     u = np.loadtxt(csv_files_u[i], delimiter=',')
     plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
     plt.colorbar(label='Concentration')
