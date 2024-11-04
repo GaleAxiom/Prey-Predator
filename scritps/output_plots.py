@@ -63,14 +63,3 @@ plt.yticks(np.arange(0.2, 0.75, 0.05))
 plt.tight_layout()
 plt.savefig('output/classification.svg')
 plt.clf()  # Clear the figure for the next plot
-
-plt.scatter(x, y, c=z, cmap=cmap, norm=norm)
-plt.colorbar()
-plt.savefig('output/classification_scatter.svg')
-
-
-# Load another data file
-data = np.genfromtxt('/Users/florentdistree/Documents/Uni/Irreversibility/output/frame_u_phi0.9_gamma0.54_600000.csv', delimiter=',')
-plt.imshow(data, cmap='seismic', origin='lower')
-plt.colorbar()
-plt.savefig('output/plates.svg')
