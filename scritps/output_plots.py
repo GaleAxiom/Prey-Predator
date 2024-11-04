@@ -40,10 +40,27 @@ sc = plt.pcolormesh(X, Y, Z.T, cmap=cmap, shading='auto')
 norm = mcolors.BoundaryNorm(boundaries, cmap.N)
 cbar = plt.colorbar(sc, boundaries=boundaries, ticks=ticks, norm=norm)
 cbar.ax.set_yticklabels((charaterizatiion))
+
+phi = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), num_x)
+gamma_transcritical = phi/2
+plt.plot(phi, gamma_transcritical, label=r'Transcritical', color='red', linewidth=1.4)
+
+rho_r = 3.333
+rho_d = 0.3
+gamma_hopf = phi - 1/rho_r
+plt.plot(phi[gamma_hopf > gamma_transcritical], gamma_hopf[gamma_hopf > gamma_transcritical], label=r'Hopf', color='cyan', linewidth=1.4)
+
+gamma_turing = rho_d/rho_r * (1 - np.sqrt(2 + rho_r/rho_d * phi))**2
+print(phi[(gamma_turing > gamma_hopf) & (gamma_turing < phi - rho_d/rho_r)])
+plt.plot(phi[(gamma_turing > gamma_hopf) & (gamma_turing < phi - rho_d/rho_r)], \
+        gamma_turing[(gamma_turing > gamma_hopf) & (gamma_turing < phi - rho_d/rho_r)], label=r'Turing', color='yellow', linewidth=1.4)
+
+plt.legend()
 plt.xlabel(r'$\phi$')
 plt.ylabel(r'$\gamma$')
 plt.xticks(np.arange(0.5, 1.01, 0.1))
 plt.yticks(np.arange(0.2, 0.75, 0.05))
+plt.tight_layout()
 plt.savefig('output/classification.svg')
 plt.clf()  # Clear the figure for the next plot
 
