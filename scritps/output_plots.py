@@ -1,67 +1,59 @@
-import imageio.v2 as imageio
-import matplotlib.pyplot as plt
 import numpy as np
-import glob
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import os
-from tqdm import tqdm
 
-# Create a list to store frames
-frames = []
+# Load data from CSV
+data = np.genfromtxt('output/message.txt', delimiter=',')
+data = data[1:]  # Skip header if present
 
-# Find all frame_u_*.csv files in the output directory
-csv_files_u = sorted(glob.glob('output/frame_u_*.csv'))
-csv_files_v = sorted(glob.glob('output/frame_v_*.csv'))
-
-# for csv_file in csv_files_u:
-#     # Load data from CSV
-#     u = np.loadtxt(csv_file, delimiter=',')
-    
-#     # Plot u
-#     plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
-#     plt.colorbar(label='Concentration')
-#     # Save the plot as an image
-#     image_path = csv_file.replace('.csv', '.png')
-#     plt.savefig(image_path)
-#     plt.clf()
-#     frames.append(imageio.imread(image_path))
-
-# # Save frames as a GIF
-# imageio.mimsave('GIFs/output_animation_u.gif', frames, duration=1)
-
-# frames = []
-
-# for csv_file in csv_files_v:
-#     # Load data from CSV
-#     u = np.loadtxt(csv_file, delimiter=',')
-    
-#     # Plot u
-#     plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
-#     plt.colorbar(label='Concentration')
-#     # Save the plot as an image
-#     image_path = csv_file.replace('.csv', '.png')
-#     plt.savefig(image_path)
-#     plt.clf()
-#     frames.append(imageio.imread(image_path))
-
-# # Save frames as a GIF
-# imageio.mimsave('GIFs/output_animation_v.gif', frames, duration=1)
-
-for i in tqdm(range(0, len(csv_files_u))):
-    u = np.loadtxt(csv_files_u[i], delimiter=',')
-    plt.imshow(u, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
-    plt.colorbar(label='Concentration')
-    image_path = csv_files_u[i].rstrip('.csv')
-    plt.savefig(image_path + '.svg')
-    plt.clf()
-
-    # v = np.loadtxt(csv_files_v[i], delimiter=',')
-    # plt.imshow(v, cmap='seismic', origin='lower', extent=[0, 1, 0, 1])
-    # plt.colorbar(label='Concentration')
-    # image_path = csv_files_v[i].rstrip('.csv')
-    # plt.savefig(image_path + '.svg')
-    # plt.clf()
+charaterizatiion = ['Homo = 1', 'Homo > 1', 'Cold Spots', 'Stripes', 'Hot Spots', 'Plates', 'Chaos']
 
 
-# Remove the CSV files in the output directory
-for csv_file in csv_files_u:
-    os.remove(csv_file)
+int_to_char = {i: char for i, char in enumerate(charaterizatiion)}
+
+# Sort data according to the rule data[:,0] * 1000000 + data[:,1]
+data = data[np.argsort(data[:, 0] * 1000000 + data[:, 1])]
+data[:,2] = data[:,2] - 1
+
+# Extract coordinates and values
+x = data[:, 0]
+y = data[:, 1]
+z = data[:, 2]
+
+# Determine the grid shape
+num_x = len(np.unique(x))
+num_y = len(np.unique(y))
+
+# Reshape z to be a 2D array with the correct dimensions
+Z = z.reshape((num_x, num_y))
+
+# Create a meshgrid for x and y
+X, Y = np.meshgrid(np.unique(x), np.unique(y))
+
+boundaries = np.arange(len(charaterizatiion) + 1) - 0.5
+ticks = np.arange(len(charaterizatiion))
+
+#coolwarm, nipy_spectral
+cmap = plt.get_cmap('nipy_spectral', len(charaterizatiion))
+sc = plt.pcolormesh(X, Y, Z.T, cmap=cmap, shading='auto')
+norm = mcolors.BoundaryNorm(boundaries, cmap.N)
+cbar = plt.colorbar(sc, boundaries=boundaries, ticks=ticks, norm=norm)
+cbar.ax.set_yticklabels((charaterizatiion))
+plt.xlabel(r'$\phi$')
+plt.ylabel(r'$\gamma$')
+plt.xticks(np.arange(0.5, 1.01, 0.1))
+plt.yticks(np.arange(0.2, 0.75, 0.05))
+plt.savefig('output/classification.svg')
+plt.clf()  # Clear the figure for the next plot
+
+plt.scatter(x, y, c=z, cmap=cmap, norm=norm)
+plt.colorbar()
+plt.savefig('output/classification_scatter.svg')
+
+
+# Load another data file
+data = np.genfromtxt('/Users/florentdistree/Documents/Uni/Irreversibility/output/frame_u_phi0.9_gamma0.54_600000.csv', delimiter=',')
+plt.imshow(data, cmap='seismic', origin='lower')
+plt.colorbar()
+plt.savefig('output/plates.svg')

@@ -10,7 +10,7 @@
 // Define parameters
 const double L = 100.0;  // Length of the domain
 const int N = 200;  // Number of grid points
-const double T = 300;  // Total time
+const double T = 500;  // Total time
 const double dt = 0.0005;  // Time step size
 const double dx = L / (N - 1);
 

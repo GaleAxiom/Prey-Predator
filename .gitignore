@@ -12,13 +12,7 @@ solver
 env
 .vscode
 
-<<<<<<< HEAD
-*.csv
-*.svg
-*.out
-=======
 # What is not from another project
 *.csv
 *.out
 *.zip
->>>>>>> 88306d5d719c0d74fabb56cbdfda7c7e2cc11f2c
