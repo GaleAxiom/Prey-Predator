@@ -3,11 +3,11 @@ CXX = clang++
 CXXFLAGS = -std=c++20 -Xpreprocessor -fopenmp -lomp -O3
 
 # Source files
-SRCS = solver_implicit.cpp
+SRCS = solver.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Target executable
-TARGET = solver_implicit
+TARGET = solver
 
 # Build rules
 all: $(TARGET)

@@ -51,7 +51,7 @@ void compute_derivatives(const std::vector<std::vector<double> >& u, const std::
 
 // Function to display the loading bar
 void display_loading_bar(int step, int total_steps, double variance) {
-    int bar_width = 70;
+    int bar_width = 35;
     float progress = (float)step / total_steps;
     int pos = bar_width * progress;
 
@@ -79,6 +79,18 @@ void save_to_csv(const std::vector<std::vector<double> >& data, const std::strin
     }
     file.close();
 }
+void save_to_csv(const std::vector<double>& data, const std::string& filename) {
+    std::ofstream file(filename);
+    file << std::fixed << std::setprecision(12);  // Set precision to 12 decimal places
+    for (size_t i = 0; i < data.size(); ++i) {
+        file << data[i];
+        if (i < data.size() - 1) {
+            file << ",";
+        }
+    }
+    file << "\n";
+    file.close();
+}
 
 int main(int argc, char* argv[]) {
 
@@ -90,14 +102,14 @@ int main(int argc, char* argv[]) {
     const double gamma  = atof(argv[3]);
     
     std::vector<std::vector<double> > u_init(N, std::vector<double>(N, 1));
-    std::vector<std::vector<double> > v_init(N, std::vector<double>(N, 1));
+    std::vector<std::vector<double> > v_init(N, std::vector<double>(N, 0));
 
     // Add small random perturbations
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             u_init[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
-            v_init[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
+            // v_init[i][j] += ((double) rand() / RAND_MAX) * 1e-5;
         }
     }
 
@@ -248,8 +260,46 @@ int main(int argc, char* argv[]) {
         }
 
         display_loading_bar(step, num_steps, variance);
+
+        if(step % 100 == 0)
+        {
+            // Phase diagram at central point
+            std::ofstream phase_diagram_file("output/phase_diagram_center_u.csv", std::ios::app);
+            phase_diagram_file << step * dt << "," << u[N/2][N/2] << "\n";
+            phase_diagram_file.close();
+
+            std::ofstream phase_diagram_file_v("output/phase_diagram_center_v.csv", std::ios::app);
+            phase_diagram_file_v << step * dt << "," << v[N/2][N/2] << "\n";
+            phase_diagram_file_v.close();
+
+            // Phase diagram of spatial average
+            std::vector<double> spatial_average_u(num_steps, 0.0);
+            std::vector<double> spatial_average_v(num_steps, 0.0);
+
+            double sum_u = 0.0;
+            double sum_v = 0.0;
+            #pragma omp parallel for reduction(+:sum_u, sum_v)
+            for (int i = 0; i < N; ++i) {
+                for (int j = 0; j < N; ++j) {
+                    sum_u += u[i][j];
+                    sum_v += v[i][j];
+                }
+            }
+            spatial_average_u[step] = sum_u / (N * N);
+            spatial_average_v[step] = sum_v / (N * N);
+            
+
+            std::ofstream spatial_average_u_file("output/spatial_average_u_phi" + std::to_string(phi) + "_gamma" + std::to_string(gamma) + ".csv", std::ios::app);
+            spatial_average_u_file << step * dt << "," << spatial_average_u[step] << "\n";
+            spatial_average_u_file.close();
+
+            std::ofstream spatial_average_v_file("output/spatial_average_v_phi" + std::to_string(phi) + "_gamma" + std::to_string(gamma) + ".csv", std::ios::app);
+            spatial_average_v_file << step * dt << "," << spatial_average_v[step] << "\n";
+            spatial_average_v_file.close();
+        }
     }
 
+    // export data
     std::ostringstream filename_u;
     filename_u << "output/frame_u_phi" << phi << "_gamma" << gamma << "_" << std::setw(6) << std::setfill('0') << num_steps << ".csv";
     save_to_csv(u, filename_u.str());
